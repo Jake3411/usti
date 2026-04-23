@@ -8,11 +8,11 @@ from src.usti_pipeline import (
     get_questionnaire,
     predict_usti_type,
     train_usti,
-    questionnaire_mapping,
     answers_to_feature_row,
     format_elbow_silhouette,
     plot_pca_scatter,
     summarize_clusters,
+    sample_cluster_examples,
 )
 
 DATA_PATH = Path(__file__).resolve().parent / "student_performance_grade.csv"
@@ -54,7 +54,7 @@ def render_questionnaire() -> Dict[str, Any] | None:
 def main() -> None:
     st.set_page_config(page_title="USTI · HKUST", layout="wide")
     st.title("USTI · University Student Type Indicator")
-    st.caption("聚类固定在 6-8 类范围内，完成问卷后可查看训练过程")
+    st.caption("聚类固定为 6 类，完成问卷后可查看训练过程")
 
     artifacts = load_artifacts()
 
@@ -66,13 +66,27 @@ def main() -> None:
 
     if answers is not None:
         result = predict_usti_type(answers, artifacts)
-        profile = result["profile"]
-        st.subheader(f"你的 USTI 类型：{profile['name']}")
-        st.write("**行为特征**：" + profile["behavior"])
-        st.write("**潜在问题**：" + "；".join(profile["risks"]))
-        st.write("**改进建议**：" + "；".join(profile["advice"]))
+        cluster_id = result["cluster"]
+        profile = result.get("profile") or {}
+        title = profile.get("title") or profile.get("name") or f"C{cluster_id}"
 
-        st.markdown("### 聚类类型特征概览（6-8 类）")
+        st.subheader(f"你的 USTI 类型：{title}")
+        intro_text = profile.get("intro") or profile.get("behavior") or ""
+        risks_text = profile.get("risks_text") or "；".join(profile.get("risks", [])) or "暂未识别"
+        advice_text = profile.get("advice_text") or "；".join(profile.get("advice", [])) or "保持当前节奏，继续小步复盘。"
+
+        st.markdown("**类型介绍**：" + intro_text)
+        st.markdown("**潜在问题**：" + risks_text)
+        st.markdown("**改进建议**：" + advice_text)
+
+        st.markdown("### 典型样本（同类型 3 个例子）")
+        samples = sample_cluster_examples(artifacts, cluster_id)
+        if samples.empty:
+            st.info("暂时没有找到同类型样本，可尝试调整数据或重新训练。")
+        else:
+            st.dataframe(samples)
+
+        st.markdown("### 聚类类型特征概览（6 类）")
         summary_df = summarize_clusters(artifacts)
         st.dataframe(summary_df)
 
@@ -82,7 +96,7 @@ def main() -> None:
 
         with st.expander("查看聚类/KMeans 过程（完成问卷后可见）", expanded=False):
             st.metric("最佳 K (Silhouette)", artifacts.best_k)
-            st.caption("K 范围固定为 6-8，依据轮廓系数选取最佳 K")
+            st.caption("K 固定为 6，依据轮廓系数验证聚类效果")
             col_left, col_right = st.columns([2, 1])
             with col_right:
                 st.dataframe(format_elbow_silhouette(artifacts))

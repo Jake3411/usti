@@ -169,6 +169,58 @@ QUESTIONNAIRE: List[Dict[str, Any]] = [
 ]
 
 
+TYPE_CONTENT: List[Dict[str, Any]] = [
+    {
+        "cluster": 0,
+        "code": "C0",
+        "name": "纯血统天才（genius）",
+        "intro": "你属于那种「别人刷题，你一看便会」的稀有物种。课堂上你可能并不总是最活跃的那一个，但关键时刻总能拿出让人惊呼「这也太轻松了吧」的成绩。你的大脑擅长于高速运行，理解新概念的速度让同学既佩服又有点心理阴影。你或许不会高调炫耀，却习惯用一次次「不费吹灰之力」证明自己确实很行。",
+        "risks": "天赋让你走得很快，但也可能让你习惯于「浅尝辄止」。有些基础概念你凭直觉就能理解，却未必真的系统梳理过，一旦遇到真正需要扎实底层理解的高阶课程，可能会突然觉得吃力。同时，因为长期「不怎么学也行」，你容易低估别人的努力，也难以接受自己有一天需要花时间补课的现实。",
+        "advice": "你不需要把自己变成卷王，但可以刻意给天赋加一点「自觉的训练」。比如：把已经会的知识再反向讲给别人听，刻意整理一份属于自己的知识框架笔记，在简单题之外给自己留几道真正有挑战的题。把「随手就会」变成「想认真卷也能卷」，未来遇到更难的关卡时，你会感谢现在多迈出半步的自己。",
+    },
+    {
+        "cluster": 1,
+        "code": "C1",
+        "name": "卷王（rat king）",
+        "intro": "你是图书馆的常驻嘉宾、安静区的「熟面孔」，你的日程表几乎被课程、作业和复习填满。别人还在纠结要不要开始写作业时，你已经默默刷完一套题；别人刚打开 PPT，你已经在做第二轮总结。你对自己要求高，习惯用效率和成果证明「我没有浪费时间」，也常常被朋友形容为「人间学习机器」。你一直觉得学习就是你的本能，你没有任何对手，直到AI的出现让你坚定的信念产生了些许动摇。",
+        "risks": "高强度的自我要求背后，可能藏着很重的焦虑和「一停下来就会被超越」的恐惧。你容易把休息当成罪恶感的来源，很难真正放松；长期处在高速运转状态，也会让身心默默透支。一旦成绩稍有波动，你可能会立刻怀疑自己不够努力、否定已有成果，甚至陷入「越焦虑越想卷，越卷越累」的循环。",
+        "advice": "对你来说，「学会适度不卷」反而是一种高级能力。可以试着给自己设定明确的下班时间，把每天能控制的部分做到位，然后大胆允许自己关机休息。关注「学习质量」而不是单纯的时间长度，把复盘、整理、提炼放进计划，而不是只堆练习量。偶尔和朋友吃顿饭、看一场电影，也是在给明天更高效的自己充电。",
+    },
+    {
+        "cluster": 2,
+        "code": "C2",
+        "name": "空想者（worrier）",
+        "intro": "你的脑子里总有很多计划、想法和「如果我认真起来就能怎样」的蓝图。你会在心里设计完一整套完美的复习方案、时间表和提升计划，却总是在真正开始前就被各种犹豫、担心和分心拉走。你不是不在意成绩，恰恰相反，你常常在心里预演各种最坏情况，只是行动的那一步总是慢半拍。你或许想改变，但改变太难，所以你无能地焦虑。",
+        "risks": "过度思考让你很难真正迈出第一步，也容易把「没开始」解读成「我就是不行」。一次次计划落空，会让你越来越不相信自己的执行力，甚至怀疑「我是不是天生做不好学生」。同时，焦虑感又会在临近 ddl 时集中爆发，用熬夜赶工的方式换来勉强过关，继续强化对自己的负面印象。",
+        "advice": "与其等「完美的状态」再开始，不如练习「先做一点点」。把宏大的目标拆成今天 15 分钟就能完成的小动作，比如只看 3 页书、只做 2 道题、只整理一个小知识点。用「完成」而不是「完美」来评价自己，每一次小小的兑现，都是在重建对自己执行力的信心。你会发现，当行动变得可控，焦虑也会悄悄退场。",
+    },
+    {
+        "cluster": 3,
+        "code": "C3",
+        "name": "无聊者（empty soul）",
+        "intro": "你和课程的关系，大概介于「不至于讨厌，但也提不起太大兴趣」之间。没错，你去上课只是因为无聊罢了。课堂对你来说更像一段必须打卡的流程，PPT 播放就是背景音，你的灵魂常常游离在别的世界：刷手机、走神、幻想下课后的安排。你并不是完全不在乎未来，只是很难在眼前的作业、章节和考试里找到真正让你兴奋的东西。",
+        "risks": "长期的「心不在焉」容易让你错失很多本可以轻松掌握的基础知识，等真正需要用到时才发现自己连门在哪都没找着。你可能会逐渐习惯用「我本来就不太行」为自己找到一个安全的借口，从而更难认真尝试。一旦周围人进入找实习、准备深造、冲绩点的阶段，这种空空荡荡的感觉会转化成突如其来的慌张。",
+        "advice": "与其强迫自己「立刻爱上学习」，不如先从找到一个小小的「有趣入口」开始。可以尝试把课程内容和现实中的问题、兴趣或未来可能的工作场景建立一点点联系，哪怕只是选一门更对胃口的选修课当作起点。给自己设定「短平快」的小任务，比如认真听完今天这 10 分钟、记下一个真正理解的点，让大脑重新体验到「学会一件事也挺爽」的感觉。",
+    },
+    {
+        "cluster": 4,
+        "code": "C4",
+        "name": "小明（Xiao Ming）",
+        "intro": "你努力学习，努力生活，却依旧难逃平庸。你时常怀疑自己是否不够聪明，是否没有真正的努力，为什么别人顺手就能做好的事你却需要花费成倍的时间才能完成。你迷茫过，徘徊过，却未曾放弃过。努力，是你一以贯之的人生信条。世界上有千千万万个你，而每一个你都从小就被冠以一个我们熟知的名字——小明！",
+        "risks": "当「努力」长期看不到与之匹配的结果时，你很容易把矛头指向自己：是不是我天赋不够、是不是我就是不适合读书。这样的自我怀疑会悄悄吞掉成就感，让你忽略那些一点点真实的进步。与此同时，如果学习方法一直停留在「多花时间、多刷题」，却缺少复盘和调整，你可能会在原地打转，越学越累。",
+        "advice": "先把「我不够聪明」这个标签搁到一边，试着把自己当作一个可以持续调试的学习系统。找老师、助教或同学一起看看：哪些时间是高效的，哪些方法其实是在白费力？把「死撑」改成「聪明地撑」，比如用错题本追踪自己的薄弱点、学会用提纲和结构化笔记帮大脑减负。你不必立刻变成学霸，只要每一个学期，都能比上一个学期的「小明」更从容一点就够了。",
+    },
+    {
+        "cluster": 5,
+        "code": "C5",
+        "name": "睡美人（Princess Aurora）",
+        "intro": "你的生命节奏被「睡眠」牢牢刻上了印记：要么熬到很晚不舍得睡，要么一睡就能补回半个周末。你懂得休息的重要性，也真心享受躺平的片刻宁静，只是作业、课表，总喜欢和你的生物钟对着干。你不是懒，你只是常常在「想再睡五分钟」和「真的该起床了」之间艰难拉扯。你时常感到焦虑，但当你躺到床上的那一刻，你又找到了自我。",
+        "risks": "作息的长期不稳定，会让你在白天的课堂上注意力涣散、记忆力下降，明明花了时间坐在教室，却收获寥寥。临近 ddl 时，你可能只能靠熬夜硬扛，把睡眠进一步压缩，进入「白天困到不行、晚上又睡不着」的恶性循环。久而久之，身体和情绪都会发出抗议，让你对学习这件事更加提不起劲。",
+        "advice": "与其一夜之间把自己变成早起达人，不如先从微调开始：比如固定一个「最晚睡觉时间」，让自己至少保证 6–7 小时的睡眠，再慢慢往前挪。可以把需要高专注的任务尽量安排在自己相对清醒的时段，把机械性任务留给「半失控」的晚上。尝试在睡前远离高刺激的刷屏，把床还给睡觉本身。当身体慢慢找回节奏，你会发现，原来清醒地学习，比困到发昏地硬撑轻松多了。",
+    },
+]
+
+
 @dataclass
 class USTIArtifacts:
     preprocessor: ColumnTransformer
@@ -249,7 +301,7 @@ def train_usti(data_path: Path, k_values: List[int] | None = None) -> USTIArtifa
     preprocessor = build_preprocessor(feature_df)
     processed = preprocessor.fit_transform(feature_df)
 
-    k_values = k_values or list(range(6, 9))  # 固定在 6-8 类之间
+    k_values = k_values or [6]  # 固定为 6 类以匹配 C0-C5 映射
     best_k, elbow, silhouettes = evaluate_kmeans(processed, k_values)
 
     kmeans = KMeans(n_clusters=best_k, n_init=20, random_state=RANDOM_STATE)
@@ -344,6 +396,17 @@ def summarize_clusters(artifacts: USTIArtifacts) -> pd.DataFrame:
     counts = pd.Series(artifacts.labels).value_counts().rename("count")
     df = df.merge(counts, left_on="cluster", right_index=True, how="left")
     df = df.rename(columns={"signals": "key_signals", "behavior": "behavior_summary"})
+
+    # 优先使用手动定义的名称与简介
+    df["manual_profile"] = df["cluster"].apply(lambda cid: get_manual_profile(int(cid)))
+    df["name"] = df.apply(
+        lambda row: (row["manual_profile"].get("title") if row["manual_profile"] else row["name"]), axis=1
+    )
+    df["behavior_summary"] = df.apply(
+        lambda row: (row["manual_profile"].get("intro") if row["manual_profile"] else row["behavior_summary"]),
+        axis=1,
+    )
+
     df["key_signals"] = df["key_signals"].apply(lambda s: "；".join(s))
     return df[["cluster", "name", "key_signals", "behavior_summary", "count"]].sort_values(
         "cluster"
@@ -523,16 +586,51 @@ def answers_to_feature_row(answers: Dict[str, Any]) -> pd.DataFrame:
     return pd.DataFrame([{col: mapped.get(col) for col in FEATURE_NAMES}])
 
 
+def get_manual_profile(cluster_id: int) -> Dict[str, Any] | None:
+    entry = next((item for item in TYPE_CONTENT if item["cluster"] == cluster_id), None)
+    if not entry:
+        return None
+    return {
+        "cluster": cluster_id,
+        "code": entry["code"],
+        "title": f"{entry['code']} · {entry['name']}",
+        "name": entry["name"],
+        "intro": entry["intro"],
+        "risks_text": entry["risks"],
+        "advice_text": entry["advice"],
+    }
+
+
+def sample_cluster_examples(artifacts: USTIArtifacts, cluster_id: int, n: int = 3) -> pd.DataFrame:
+    columns = [
+        "Hours_Studied",
+        "Previous_GPA",
+        "Sleep_Hours",
+        "Screen_Time",
+        "Stress_Level",
+        "Study_Method",
+    ]
+    df = artifacts.feature_frame
+    subset = df[df["cluster"] == cluster_id]
+    if subset.empty:
+        return pd.DataFrame(columns=columns)
+    subset = subset[columns].head(n).copy()
+    subset.insert(0, "Sample", [f"Sample {i + 1}" for i in range(len(subset))])
+    return subset.reset_index(drop=True)
+
+
 def predict_usti_type(answers: Dict[str, Any], artifacts: USTIArtifacts) -> Dict[str, Any]:
     row = answers_to_feature_row(answers)
     processed = artifacts.preprocessor.transform(row)
     processed_dense = processed.toarray() if hasattr(processed, "toarray") else processed
     cluster_id = int(artifacts.kmeans.predict(processed_dense)[0])
 
-    profile = next((p for p in artifacts.cluster_profiles if p["cluster"] == cluster_id), None)
+    auto_profile = next((p for p in artifacts.cluster_profiles if p["cluster"] == cluster_id), None)
+    profile = get_manual_profile(cluster_id) or auto_profile
     return {
         "cluster": cluster_id,
         "profile": profile,
+        "auto_profile": auto_profile,
     }
 
 
