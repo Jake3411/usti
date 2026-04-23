@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
@@ -15,6 +16,7 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.tree import DecisionTreeClassifier
 
 RANDOM_STATE = 42
 
@@ -234,6 +236,9 @@ class USTIArtifacts:
     labels: np.ndarray
     feature_frame: pd.DataFrame
     cluster_profiles: List[Dict[str, Any]]
+    quantiles: Dict[str, Dict[str, float]]
+    classifier: DecisionTreeClassifier
+    feature_importances: Dict[str, float]
 
 
 def load_dataset(path: Path) -> pd.DataFrame:
@@ -294,12 +299,45 @@ def evaluate_kmeans(processed: np.ndarray, k_values: List[int]) -> Tuple[int, Li
     return best_k, elbow, silhouettes
 
 
+def compute_feature_quantiles(feature_df: pd.DataFrame) -> Dict[str, Dict[str, float]]:
+    quantile_frame = feature_df[NUMERIC_FEATURES].quantile([0.25, 0.5, 0.75])
+    return {
+        col: {
+            "p25": float(quantile_frame.loc[0.25, col]),
+            "p50": float(quantile_frame.loc[0.5, col]),
+            "p75": float(quantile_frame.loc[0.75, col]),
+        }
+        for col in NUMERIC_FEATURES
+    }
+
+
+def aggregate_feature_importance(model: DecisionTreeClassifier, preprocessor: ColumnTransformer) -> Dict[str, float]:
+    feature_names = preprocessor.get_feature_names_out()
+    raw_importance = getattr(model, "feature_importances_", np.zeros(len(feature_names)))
+    agg = defaultdict(float)
+    for name, weight in zip(feature_names, raw_importance):
+        if weight <= 0:
+            continue
+        if name.startswith("num__"):
+            base = name.split("__", 1)[1]
+        elif name.startswith("cat__"):
+            # cat__Study_Method_Online -> Study_Method
+            base = name.split("__", 1)[1].split("_", 1)[0]
+        else:
+            base = name
+        agg[base] += float(weight)
+    total = sum(agg.values()) or 1.0
+    return {k: v / total for k, v in sorted(agg.items(), key=lambda kv: kv[1], reverse=True)}
+
+
 def train_usti(data_path: Path, k_values: List[int] | None = None) -> USTIArtifacts:
     raw = load_dataset(data_path)
     feature_df = clean_and_select(raw)
+    quantiles = compute_feature_quantiles(feature_df)
 
     preprocessor = build_preprocessor(feature_df)
     processed = preprocessor.fit_transform(feature_df)
+    processed_dense = processed.toarray() if hasattr(processed, "toarray") else processed
 
     k_values = k_values or [6]  # 固定为 6 类以匹配 C0-C5 映射
     best_k, elbow, silhouettes = evaluate_kmeans(processed, k_values)
@@ -307,8 +345,11 @@ def train_usti(data_path: Path, k_values: List[int] | None = None) -> USTIArtifa
     kmeans = KMeans(n_clusters=best_k, n_init=20, random_state=RANDOM_STATE)
     labels = kmeans.fit_predict(processed)
 
+    classifier = DecisionTreeClassifier(max_depth=4, random_state=RANDOM_STATE, class_weight="balanced")
+    classifier.fit(processed_dense, labels)
+    feature_importances = aggregate_feature_importance(classifier, preprocessor)
+
     pca = PCA(n_components=2, random_state=RANDOM_STATE)
-    processed_dense = processed.toarray() if hasattr(processed, "toarray") else processed
     pca_coords = pca.fit_transform(processed_dense)
 
     cluster_profiles = build_cluster_profiles(feature_df, labels)
@@ -325,6 +366,9 @@ def train_usti(data_path: Path, k_values: List[int] | None = None) -> USTIArtifa
         labels=labels,
         feature_frame=feature_df.assign(cluster=labels, PC1=pca_coords[:, 0], PC2=pca_coords[:, 1]),
         cluster_profiles=cluster_profiles,
+        quantiles=quantiles,
+        classifier=classifier,
+        feature_importances=feature_importances,
     )
 
 
@@ -474,7 +518,7 @@ def describe_advice(signals: List[str]) -> List[str]:
     return advice
 
 
-def questionnaire_mapping(answer: Any, feature: str) -> Any:
+def questionnaire_mapping(answer: Any, feature: str, quantiles: Dict[str, Dict[str, float]] | None = None) -> Any:
     def map_level(option_map: Dict[str, int], default_level: int = 3) -> int:
         if isinstance(answer, str):
             return option_map.get(answer, default_level)
@@ -482,6 +526,18 @@ def questionnaire_mapping(answer: Any, feature: str) -> Any:
             return int(answer)
         except (TypeError, ValueError):
             return default_level
+
+    def numeric_from_quantiles(level: int, fallback_map: Dict[int, float]) -> float:
+        level_bucket = {1: "low", 3: "mid", 5: "high"}.get(level, "mid")
+        default_value = fallback_map.get(level, fallback_map.get(3, list(fallback_map.values())[0]))
+        if quantiles and feature in quantiles:
+            q = quantiles[feature]
+            if level_bucket == "low":
+                return q.get("p25", default_value)
+            if level_bucket == "high":
+                return q.get("p75", default_value)
+            return q.get("p50", default_value)
+        return default_value
 
     if feature == "Hours_Studied":
         level = map_level(
@@ -491,7 +547,7 @@ def questionnaire_mapping(answer: Any, feature: str) -> Any:
                 "C. 只有作业/考试前才会突击一下，大部分时候很少坐下来系统学习。": 1,
             }
         )
-        return {1: 0.8, 3: 4.0, 5: 8.5}.get(level, 4.0)
+        return numeric_from_quantiles(level, {1: 0.8, 3: 4.0, 5: 8.5})
 
     if feature == "Attendance":
         level = map_level(
@@ -501,7 +557,7 @@ def questionnaire_mapping(answer: Any, feature: str) -> Any:
                 "C. 经常因为各种原因不去上课，Canvas被设计出来是有它的道理的。": 1,
             }
         )
-        return {1: 60, 3: 82, 5: 97}.get(level, 82)
+        return numeric_from_quantiles(level, {1: 60, 3: 82, 5: 97})
 
     if feature == "Previous_GPA":
         level = map_level(
@@ -511,7 +567,7 @@ def questionnaire_mapping(answer: Any, feature: str) -> Any:
                 "C. 经常在及格线附近徘徊，有几门甚至触碰到了fail的边缘。": 1,
             }
         )
-        return {1: 1.9, 3: 2.9, 5: 3.8}.get(level, 3.0)
+        return numeric_from_quantiles(level, {1: 1.9, 3: 2.9, 5: 3.8})
 
     if feature == "Exam_Anxiety_Score":
         level = map_level(
@@ -521,7 +577,7 @@ def questionnaire_mapping(answer: Any, feature: str) -> Any:
                 "C. 该吃吃，该睡睡，平常咋样就咋样。": 1,
             }
         )
-        return {1: 2.0, 3: 6.0, 5: 9.5}.get(level, 6.0)
+        return numeric_from_quantiles(level, {1: 2.0, 3: 6.0, 5: 9.5})
 
     if feature == "Study_Method":
         mapping = {
@@ -539,7 +595,7 @@ def questionnaire_mapping(answer: Any, feature: str) -> Any:
                 "C. 经常熬到很晚，睡眠不足 6 小时，但我还活着啊。": 1,
             }
         )
-        return {1: 5.0, 3: 6.5, 5: 8.2}.get(level, 6.5)
+        return numeric_from_quantiles(level, {1: 5.0, 3: 6.5, 5: 8.2})
 
     if feature == "Screen_Time":
         level = map_level(
@@ -549,7 +605,7 @@ def questionnaire_mapping(answer: Any, feature: str) -> Any:
                 "C. 偶尔看看消息，大部分时间不会长时间盯着屏幕。": 1,
             }
         )
-        return {1: 1.0, 3: 3.0, 5: 6.0}.get(level, 3.0)
+        return numeric_from_quantiles(level, {1: 1.0, 3: 3.0, 5: 6.0})
 
     if feature == "Extracurricular":
         mapping = {
@@ -575,13 +631,13 @@ def questionnaire_mapping(answer: Any, feature: str) -> Any:
                 "C. 节奏相对平稳，偶有小波动，但整体觉得还挺能hold住。": 1,
             }
         )
-        return {1: 2.0, 3: 6.0, 5: 9.5}.get(level, 6.0)
+        return numeric_from_quantiles(level, {1: 2.0, 3: 6.0, 5: 9.5})
 
     return answer
 
 
-def answers_to_feature_row(answers: Dict[str, Any]) -> pd.DataFrame:
-    mapped = {feat: questionnaire_mapping(ans, feat) for feat, ans in answers.items()}
+def answers_to_feature_row(answers: Dict[str, Any], quantiles: Dict[str, Dict[str, float]] | None = None) -> pd.DataFrame:
+    mapped = {feat: questionnaire_mapping(ans, feat, quantiles) for feat, ans in answers.items()}
     # 确保列顺序一致
     return pd.DataFrame([{col: mapped.get(col) for col in FEATURE_NAMES}])
 
@@ -620,10 +676,14 @@ def sample_cluster_examples(artifacts: USTIArtifacts, cluster_id: int, n: int = 
 
 
 def predict_usti_type(answers: Dict[str, Any], artifacts: USTIArtifacts) -> Dict[str, Any]:
-    row = answers_to_feature_row(answers)
+    row = answers_to_feature_row(answers, artifacts.quantiles)
     processed = artifacts.preprocessor.transform(row)
     processed_dense = processed.toarray() if hasattr(processed, "toarray") else processed
+
     cluster_id = int(artifacts.kmeans.predict(processed_dense)[0])
+    proba = artifacts.classifier.predict_proba(processed_dense)[0]
+    class_order = [int(c) for c in artifacts.classifier.classes_]
+    type_probabilities = {cid: float(p) for cid, p in zip(class_order, proba)}
 
     auto_profile = next((p for p in artifacts.cluster_profiles if p["cluster"] == cluster_id), None)
     profile = get_manual_profile(cluster_id) or auto_profile
@@ -631,6 +691,8 @@ def predict_usti_type(answers: Dict[str, Any], artifacts: USTIArtifacts) -> Dict
         "cluster": cluster_id,
         "profile": profile,
         "auto_profile": auto_profile,
+        "type_probabilities": type_probabilities,
+        "feature_importances": artifacts.feature_importances,
     }
 
 

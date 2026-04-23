@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Dict, Any
 
+import pandas as pd
 import streamlit as st
 
 from src.usti_pipeline import (
@@ -69,6 +70,8 @@ def main() -> None:
         cluster_id = result["cluster"]
         profile = result.get("profile") or {}
         title = profile.get("title") or profile.get("name") or f"C{cluster_id}"
+        probs = result.get("type_probabilities") or {}
+        importances = result.get("feature_importances") or {}
 
         st.subheader(f"你的 USTI 类型：{title}")
         intro_text = profile.get("intro") or profile.get("behavior") or ""
@@ -78,6 +81,29 @@ def main() -> None:
         st.markdown("**类型介绍**：" + intro_text)
         st.markdown("**潜在问题**：" + risks_text)
         st.markdown("**改进建议**：" + advice_text)
+
+        st.markdown("### 类型匹配度（基于决策树分类器）")
+        if probs:
+            prob_df = pd.DataFrame([probs]).T.reset_index()
+            prob_df.columns = ["类型", "概率"]
+            prob_df["类型"] = prob_df["类型"].apply(lambda x: f"C{x}")
+            prob_df["概率"] = prob_df["概率"].apply(lambda x: f"{x:.1%}")
+            st.dataframe(prob_df)
+        else:
+            st.info("暂无概率信息")
+
+        st.markdown("### 区分度最高的特征（模型重要性）")
+        if importances:
+            imp_df = pd.DataFrame(
+                [
+                    {"特征": feat, "重要性": score}
+                    for feat, score in sorted(importances.items(), key=lambda kv: kv[1], reverse=True)
+                ]
+            )
+            imp_df["重要性"] = imp_df["重要性"].apply(lambda x: f"{x:.2%}")
+            st.dataframe(imp_df)
+        else:
+            st.info("暂无特征重要性信息")
 
         st.markdown("### 典型样本（同类型 3 个例子）")
         samples = sample_cluster_examples(artifacts, cluster_id)
@@ -91,7 +117,7 @@ def main() -> None:
         st.dataframe(summary_df)
 
         st.markdown("### 你的回答对应的标准化特征")
-        row = answers_to_feature_row(answers)
+        row = answers_to_feature_row(answers, artifacts.quantiles)
         st.dataframe(row)
 
         with st.expander("查看聚类/KMeans 过程（完成问卷后可见）", expanded=False):
