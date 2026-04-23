@@ -680,18 +680,28 @@ def predict_usti_type(answers: Dict[str, Any], artifacts: USTIArtifacts) -> Dict
     processed = artifacts.preprocessor.transform(row)
     processed_dense = processed.toarray() if hasattr(processed, "toarray") else processed
 
-    cluster_id = int(artifacts.kmeans.predict(processed_dense)[0])
+    # 基于聚类的类型（硬标签）与软匹配度
+    kmeans_cluster_id = int(artifacts.kmeans.predict(processed)[0])
+    distances = artifacts.kmeans.transform(processed)[0]
+    weights = np.exp(-np.square(distances))
+    weights_sum = float(weights.sum()) or 1.0
+    cluster_probabilities = {int(i): float(w / weights_sum) for i, w in enumerate(weights)}
+
+    # 基于决策树分类器的类型概率与最终类型
     proba = artifacts.classifier.predict_proba(processed_dense)[0]
     class_order = [int(c) for c in artifacts.classifier.classes_]
     type_probabilities = {cid: float(p) for cid, p in zip(class_order, proba)}
+    tree_cluster_id = int(artifacts.classifier.predict(processed_dense)[0])
 
-    auto_profile = next((p for p in artifacts.cluster_profiles if p["cluster"] == cluster_id), None)
-    profile = get_manual_profile(cluster_id) or auto_profile
+    auto_profile = next((p for p in artifacts.cluster_profiles if p["cluster"] == tree_cluster_id), None)
+    profile = get_manual_profile(tree_cluster_id) or auto_profile
     return {
-        "cluster": cluster_id,
+        "cluster": tree_cluster_id,
+        "kmeans_cluster": kmeans_cluster_id,
         "profile": profile,
         "auto_profile": auto_profile,
         "type_probabilities": type_probabilities,
+        "cluster_probabilities": cluster_probabilities,
         "feature_importances": artifacts.feature_importances,
     }
 

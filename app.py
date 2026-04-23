@@ -67,13 +67,18 @@ def main() -> None:
 
     if answers is not None:
         result = predict_usti_type(answers, artifacts)
-        cluster_id = result["cluster"]
+        cluster_id = result["cluster"]  # 基于决策树的最终类型
+        kmeans_cluster_id = result.get("kmeans_cluster")
         profile = result.get("profile") or {}
         title = profile.get("title") or profile.get("name") or f"C{cluster_id}"
         probs = result.get("type_probabilities") or {}
+        cluster_probs = result.get("cluster_probabilities") or {}
         importances = result.get("feature_importances") or {}
 
         st.subheader(f"你的 USTI 类型：{title}")
+        if kmeans_cluster_id is not None and kmeans_cluster_id != cluster_id:
+            st.caption(f"（对比：若直接按聚类最近中心，你更接近 C{kmeans_cluster_id}）")
+
         intro_text = profile.get("intro") or profile.get("behavior") or ""
         risks_text = profile.get("risks_text") or "；".join(profile.get("risks", [])) or "暂未识别"
         advice_text = profile.get("advice_text") or "；".join(profile.get("advice", [])) or "保持当前节奏，继续小步复盘。"
@@ -91,6 +96,16 @@ def main() -> None:
             st.dataframe(prob_df)
         else:
             st.info("暂无概率信息")
+
+        st.markdown("### 类型匹配度（基于聚类距离/KMeans）")
+        if cluster_probs:
+            kmeans_prob_df = pd.DataFrame([cluster_probs]).T.reset_index()
+            kmeans_prob_df.columns = ["类型", "概率"]
+            kmeans_prob_df["类型"] = kmeans_prob_df["类型"].apply(lambda x: f"C{x}")
+            kmeans_prob_df["概率"] = kmeans_prob_df["概率"].apply(lambda x: f"{x:.1%}")
+            st.dataframe(kmeans_prob_df)
+        else:
+            st.info("暂无基于聚类的匹配度信息")
 
         st.markdown("### 区分度最高的特征（模型重要性）")
         if importances:
