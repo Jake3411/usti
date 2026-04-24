@@ -338,10 +338,12 @@ def render_questionnaire(lang: str) -> Dict[str, Any] | None:
                 base_options = q["options"]
                 display_options = base_options if lang == "zh" else meta.get("options_en", base_options)
                 option_indices = list(range(len(base_options)))
-                selected_index = st.selectbox(
+                selected_index = st.radio(
                     label=f"Q{q['id']} · {question_text}",
                     options=option_indices,
                     format_func=lambda idx: display_options[idx],
+                    horizontal=False,
+                    key=f"q_{q['id']}",
                 )
                 answers[q["feature"]] = base_options[selected_index]
             elif q["type"] == "scale":
