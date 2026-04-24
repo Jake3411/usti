@@ -85,83 +85,83 @@ TEXT: Dict[str, Dict[str, str]] = {
 # 问卷英文文案（保留原始选项作为真实取值，便于映射）
 QUESTION_I18N: Dict[int, Dict[str, Any]] = {
     1: {
-        "question_en": "It's one hour before dinner. Besides classes, how did you spend the day?",
+        "question_en": "It's one hour before dinner; besides classes, how did you spend today?",
         "options_en": [
-            "A. Spent most of the day in the library; likely 4–6+ hours of study.",
-            "B. Found one or two study blocks, about 2–3 hours in total.",
-            "C. Rarely sit down to study unless a deadline/exam is near.",
+            "A. Already camped in the library for a long time; today will be ~4–6+ hours of study.",
+            "B. Pulled one or two study blocks for courses/homework, about 2–3 hours in total.",
+            "C. Mostly only cram before assignments/exams; rarely sit down for systematic study otherwise.",
         ],
     },
     2: {
-        "question_en": "This semester, which best describes your attendance?",
+        "question_en": "This semester, which best describes your attendance style?",
         "options_en": [
-            "A. I'm there whenever the instructor is (and often even if not).",
-            "B. I go to most classes, occasionally miss a couple.",
-            "C. Frequently skip; Canvas was invented for a reason.",
+            "A. If the instructor is there, I'm there—and often even when they're not.",
+            "B. Go to most classes, but occasionally miss one or two from oversleeping or overload.",
+            "C. Frequently skip for various reasons; Canvas exists for a reason.",
         ],
     },
     3: {
-        "question_en": "Thinking of last term, your transcript looks like?",
+        "question_en": "Thinking back to last term, your transcript roughly was?",
         "options_en": [
-            "A. Consistently high grades with minor hiccups.",
-            "B. Mixed; some highs and lows, a few good courses.",
-            "C. Hovering near pass line; some courses almost failed.",
+            "A. Consistently high grades with only minor hiccups.",
+            "B. Mixed highs and lows; a few courses went pretty well.",
+            "C. Hovering near the pass line; some courses almost failed.",
         ],
     },
     4: {
-        "question_en": "One week before finals, you are usually?",
+        "question_en": "One week before finals, you're usually?",
         "options_en": [
-            "A. Can't eat or sleep; mind is all exams.",
-            "B. A bit nervous, which keeps me focused.",
-            "C. Business as usual; eat and sleep fine.",
+            "A. Can't eat or sleep; mind is filled with exams—already ascended.",
+            "B. A bit nervous, which keeps me alert and focused.",
+            "C. Business as usual; eat and sleep just like normal.",
         ],
     },
     5: {
-        "question_en": "When you actually start studying, you usually?",
+        "question_en": "When you actually settle into studying, you usually?",
         "options_en": [
-            "A. Use online courses/materials; mostly study on computer/tablet.",
-            "B. Mix of in-person and online, whichever works.",
-            "C. Prefer in-person/printed materials; online is just support.",
+            "A. Open online courses/e-materials and do most studying on computer/tablet (online-leaning).",
+            "B. Mix classroom and online resources—use whatever is convenient (hybrid).",
+            "C. Prefer being in a classroom/library or with print; online is just support (offline-leaning).",
         ],
     },
     6: {
-        "question_en": "On regular weeks (not cram), your sleep rhythm is?",
+        "question_en": "Outside cram weeks, your usual sleep rhythm is?",
         "options_en": [
-            "A. Usually 7–8+ hours; well-rested.",
-            "B. Mostly 6–7 hours; occasionally less but generally ok.",
-            "C. Often sleep <6 hours, staying up late.",
+            "A. Usually secure 8–9+ hours; sleep well then fight again.",
+            "B. Mostly 6–7 hours; occasionally less but generally sufficient.",
+            "C. Often stay up very late, sleeping under 6 hours—but I'm still alive.",
         ],
     },
     7: {
-        "question_en": "Daily non-study screen time for entertainment is?",
+        "question_en": "Excluding study time, your daily entertainment screen use is?",
         "options_en": [
-            "A. Major part of the day; hours of videos/social/games.",
-            "B. Use it but try to control it, not exceeding study time.",
-            "C. Occasionally check messages; rarely long screen time.",
+            "A. Videos/social/games are the main chunk; hours can disappear at once.",
+            "B. Use screens now and then but consciously control it, not exceeding study time.",
+            "C. Occasionally check messages; rarely stare at screens for long.",
         ],
     },
     8: {
-        "question_en": "Regarding clubs/volunteering/competitions, you're more like?",
+        "question_en": "For clubs/volunteering/competitions, you're more like?",
         "options_en": [
-            "A. Join frequently; on the activity list weekly.",
-            "B. Join occasionally when interested; not always busy.",
-            "C. Seldom participate; keep time for self or coursework.",
+            "A. Join frequently, with one or two activities each week—often on the list.",
+            "B. Join occasionally when interested; not constantly busy.",
+            "C. Rarely participate, keeping more time for yourself or coursework.",
         ],
     },
     9: {
-        "question_en": "If your weekly schedule is a pie chart, the slice for part-time job is?",
+        "question_en": "If your semester schedule were a pie chart, the slice for part-time work is?",
         "options_en": [
-            "A. None or very occasional help; no fixed time.",
-            "B. Short-term/irregular gigs; some weeks busy.",
-            "C. A steady job; fixed hours every week.",
+            "A. None or just occasional helping; no fixed time occupied.",
+            "B. Short-term/irregular gigs; some weeks get busier.",
+            "C. A steady part-time job with fixed hours each week.",
         ],
     },
     10: {
-        "question_en": "Past two weeks, your overall stress about study/life is?",
+        "question_en": "In the past two weeks, your overall stress about study/life is closer to?",
         "options_en": [
-            "A. Tasks keep coming; stress often maxed.",
-            "B. Stress exists but manageable; can relax after tasks.",
-            "C. Fairly steady rhythm; mostly able to hold it.",
+            "A. Tasks keep coming one after another; stress often maxed out.",
+            "B. Stress exists but is manageable; once tasks end I can clearly relax.",
+            "C. Rhythm is fairly steady with small bumps; overall I can hold it.",
         ],
     },
 }
@@ -218,9 +218,9 @@ PROFILE_EN: Dict[int, Dict[str, str]] = {
     },
     5: {
         "title": "C5 · Princess Aurora",
-        "intro": "Sleep patterns dominate your rhythm; rest is precious yet conflicts with tasks.",
-        "risks_text": "Irregular sleep hurts focus and may cause a cycle of cramming and fatigue.",
-        "advice_text": "Anchor a latest bedtime, protect 7h sleep, and align hard tasks with awake hours.",
+        "intro": "Some call you chill or wellness-obsessed, but you know you simply love sleep. Like a laptop that auto-shuts when stress and fatigue stack up, your brain hits sleep to pause the world. In this fast-paced era you often unplug from people and the feed, using sleep, zoning out, and idling to digest feelings. Others may think you're slow or not tense enough, but you know without those hours of rest, any effort afterward is just running on fumes.",
+        "risks_text": "When stress and fatigue pile up, sleeping to “repair the system” soothes emotions but also pauses tasks and rhythm. In real crunches you may swing between “sleep first” and “work piling up,” ending up sleeping plenty yet staying mildly anxious. Over time you might slip into the low-energy crowd, unsure whether it's laziness or just your nature.",
+        "advice_text": "Instead of forcing yourself into a 3-hour-sleep warrior, admit “I need enough sleep to face life,” then design a smarter rhythm around that. Set a latest bedtime and wake time, protect 7–8 hours as a hard boundary, and reserve your clearest window for the toughest tasks; compress screen time into a few short reward slots to avoid doomscrolling in bed. This keeps your self-healing via sleep while training yourself to arrange study and life with more control in your awake hours.",
     },
     6: {
         "title": "C6 · lier",
