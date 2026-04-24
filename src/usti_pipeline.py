@@ -220,6 +220,22 @@ TYPE_CONTENT: List[Dict[str, Any]] = [
         "risks": "作息的长期不稳定，会让你在白天的课堂上注意力涣散、记忆力下降，明明花了时间坐在教室，却收获寥寥。临近 ddl 时，你可能只能靠熬夜硬扛，把睡眠进一步压缩，进入「白天困到不行、晚上又睡不着」的恶性循环。久而久之，身体和情绪都会发出抗议，让你对学习这件事更加提不起劲。",
         "advice": "与其一夜之间把自己变成早起达人，不如先从微调开始：比如固定一个「最晚睡觉时间」，让自己至少保证 6–7 小时的睡眠，再慢慢往前挪。可以把需要高专注的任务尽量安排在自己相对清醒的时段，把机械性任务留给「半失控」的晚上。尝试在睡前远离高刺激的刷屏，把床还给睡觉本身。当身体慢慢找回节奏，你会发现，原来清醒地学习，比困到发昏地硬撑轻松多了。",
     },
+    {
+        "cluster": 6,
+        "code": "C6",
+        "name": "躺平者（lier）",
+        "intro": "你也许曾经也期待过很多，但当愿望一次次落空后，某一刻的你决定放下这些期待。课堂、作业、绩点，这些在你心中都只是「还能混过就行」，你按最低成本维持运转，绝不主动多给自己压力。当别人焦虑 ddl、担心 GPA 的时候，你就像旁观者：知道事情不完美，所以大可不必为了这些把自己逼疯。你总是这么对自己说，也慢慢开始这么做。但你确定你满口的不在乎真的不是一个谎言吗？lier和liar可只是一字之差。",
+        "risks": "长期维持低投入、低出勤、低期待，会慢慢把「我不想要这些」变成一种自我设限。你可能在潜意识里把很多机会提前排除掉：觉得申请不到、竞争不过，于是干脆不试。短期看，这种心态确实帮你躲开了很多焦虑；但时间一长，当身边的人开始为实习、深造、转专业做准备时，你可能会突然发现自己缺少选择，只能被动接受外界的安排。更隐蔽的风险在于，你会越来越难相信「认真一次可能会有不一样的结果」，从而更难真正启动改变。",
+        "advice": "如果你现在不想变成卷王，那也完全没问题，但可以给未来的自己留一点「转向的余地」。与其要求自己突然 180 度大转弯，不如先在现有节奏里加一两个小锚点：比如选一门你相对不讨厌的课，尝试把这门课的作业和复习稍微做得认真一点；或者每周固定留出一小段时间，用来补一件「对未来有点用」的小事（整理简历、看一眼感兴趣专业的资料等）。躺平不等于放弃，只要你愿意保留一点点试错的空间，当你哪天真的想发力时，就不需要从零开始重启人生系统。",
+    },
+    {
+        "cluster": 7,
+        "code": "C7",
+        "name": "社会人（social bro）",
+        "intro": "和很多「只在课表里生活」的同学不同，你更像是在学校里过着半社会人的节奏。社团、活动、项目、兼职、人脉……这些关键词对你来说比课堂座位更有吸引力。你可能会错过一些lecture和点名，但你几乎不会错过重要的活动 briefing、组会、线下聚会和合作机会。你对世界的好奇更多指向「真实的人和事情」而不是 PPT 上的公式和理论，你在社交场、活动现场往往更有存在感，也更相信「在实践里学到的东西才是自己的」。尽情享受你的connections吧，至于他们真的有没有用，谁知道呢？",
+        "risks": "把大量精力投向社团、活动和兼职，确实能让你在沟通、协作、领导力这些 soft skills 上跑在前面，但如果长期忽视课堂和基础知识，你可能会在某些关键节点被「硬指标」绊住——比如 GPA 门槛、必修挂科、毕业要求等。更大的风险是，你可能习惯用「我在外面很忙」「我在做更有价值的事」来合理化自己对学业的忽略，从而错过把实践和知识真正结合起来的机会。久而久之，你在活动中越游刃有余，反差之下在课堂里的挫败感可能会越强。",
+        "advice": "你不需要放弃「社会人」的身份，反而可以把这份经验变成你的核心竞争力，只是需要一点点结构化。尝试把你在社团、项目、兼职里做的事，用课程和专业语言重新描述：你在管理的其实是什么流程，你在解决的具体是什么问题，你用到的是哪些技能。选几门和你现实项目高度相关的课，把它们当作「给自己现有能力加标签」的工具课来学，而不是纯应付。与此同时，可以适当给自己设一个学业底线，比如不让 GPA 掉到某个数字以下，或者确保关键必修不过线。这样你既保留了当下的「社会人」生活，又在为未来那份简历和人生叙事悄悄打底。",
+    },
 ]
 
 
@@ -309,6 +325,36 @@ def compute_feature_quantiles(feature_df: pd.DataFrame) -> Dict[str, Dict[str, f
         }
         for col in NUMERIC_FEATURES
     }
+
+
+def is_lier(row: pd.Series, quantiles: Dict[str, Dict[str, float]]) -> bool:
+    return (
+        row["Previous_GPA"] <= quantiles["Previous_GPA"]["p25"]
+        and row["Hours_Studied"] <= quantiles["Hours_Studied"]["p25"]
+        and row["Attendance"] <= quantiles["Attendance"]["p25"]
+        and row["Exam_Anxiety_Score"] <= quantiles["Exam_Anxiety_Score"]["p50"]
+        and row["Stress_Level"] <= quantiles["Stress_Level"]["p50"]
+    )
+
+
+def is_social_bro(row: pd.Series, raw_answers: Dict[str, Any], quantiles: Dict[str, Dict[str, float]]) -> bool:
+    extracurricular_raw = str(raw_answers.get("Extracurricular", "")).strip()
+    high_extracurricular = extracurricular_raw.startswith("A.")
+    return (
+        row["Attendance"] <= quantiles["Attendance"]["p25"]
+        and row["Previous_GPA"] <= quantiles["Previous_GPA"]["p25"]
+        and row["Hours_Studied"] <= quantiles["Hours_Studied"]["p25"]
+        and str(row["Extracurricular"]).lower() == "yes"
+        and high_extracurricular
+    )
+
+
+def apply_rule_persona(row: pd.Series, raw_answers: Dict[str, Any], quantiles: Dict[str, Dict[str, float]]) -> int | None:
+    if is_lier(row, quantiles):
+        return 6
+    if is_social_bro(row, raw_answers, quantiles):
+        return 7
+    return None
 
 
 def aggregate_feature_importance(model: DecisionTreeClassifier, preprocessor: ColumnTransformer) -> Dict[str, float]:
@@ -677,6 +723,9 @@ def sample_cluster_examples(artifacts: USTIArtifacts, cluster_id: int, n: int = 
 
 def predict_usti_type(answers: Dict[str, Any], artifacts: USTIArtifacts) -> Dict[str, Any]:
     row = answers_to_feature_row(answers, artifacts.quantiles)
+    row_values = row.iloc[0]
+    rule_cluster = apply_rule_persona(row_values, answers, artifacts.quantiles)
+
     processed = artifacts.preprocessor.transform(row)
     processed_dense = processed.toarray() if hasattr(processed, "toarray") else processed
 
@@ -693,16 +742,27 @@ def predict_usti_type(answers: Dict[str, Any], artifacts: USTIArtifacts) -> Dict
     type_probabilities = {cid: float(p) for cid, p in zip(class_order, proba)}
     tree_cluster_id = int(artifacts.classifier.predict(processed_dense)[0])
 
-    auto_profile = next((p for p in artifacts.cluster_profiles if p["cluster"] == tree_cluster_id), None)
-    profile = get_manual_profile(tree_cluster_id) or auto_profile
+    # 若命中规则型人格，直接返回 C6/C7
+    final_cluster_id = rule_cluster if rule_cluster is not None else tree_cluster_id
+    rule_based = rule_cluster is not None
+
+    auto_profile = None if rule_based else next((p for p in artifacts.cluster_profiles if p["cluster"] == tree_cluster_id), None)
+    profile = get_manual_profile(final_cluster_id) or auto_profile
+
+    # 规则命中时不展示模型概率，避免混淆
+    if rule_based:
+        type_probabilities = {}
+        cluster_probabilities = {}
+
     return {
-        "cluster": tree_cluster_id,
+        "cluster": final_cluster_id,
         "kmeans_cluster": kmeans_cluster_id,
         "profile": profile,
         "auto_profile": auto_profile,
         "type_probabilities": type_probabilities,
         "cluster_probabilities": cluster_probabilities,
         "feature_importances": artifacts.feature_importances,
+        "rule_based": rule_based,
     }
 
 

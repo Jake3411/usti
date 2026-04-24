@@ -55,7 +55,7 @@ def render_questionnaire() -> Dict[str, Any] | None:
 def main() -> None:
     st.set_page_config(page_title="USTI · HKUST", layout="wide")
     st.title("USTI · University Student Type Indicator")
-    st.caption("聚类固定为 6 类，完成问卷后可查看训练过程")
+    st.caption("聚类固定为 6 类（C0–C5 数据驱动），另有规则型 C6/C7 由阈值判定")
 
     artifacts = load_artifacts()
 
@@ -67,15 +67,18 @@ def main() -> None:
 
     if answers is not None:
         result = predict_usti_type(answers, artifacts)
-        cluster_id = result["cluster"]  # 基于决策树的最终类型
+        cluster_id = result["cluster"]
         kmeans_cluster_id = result.get("kmeans_cluster")
         profile = result.get("profile") or {}
         title = profile.get("title") or profile.get("name") or f"C{cluster_id}"
         probs = result.get("type_probabilities") or {}
         cluster_probs = result.get("cluster_probabilities") or {}
         importances = result.get("feature_importances") or {}
+        rule_based = result.get("rule_based", False)
 
         st.subheader(f"你的 USTI 类型：{title}")
+        if rule_based:
+            st.caption("（规则命中：本次类型由阈值直接判定为 C6/C7，模型概率未展示）")
         if kmeans_cluster_id is not None and kmeans_cluster_id != cluster_id:
             st.caption(f"（对比：若直接按聚类最近中心，你更接近 C{kmeans_cluster_id}）")
 
@@ -127,7 +130,7 @@ def main() -> None:
         else:
             st.dataframe(samples)
 
-        st.markdown("### 聚类类型特征概览（6 类）")
+        st.markdown("### 聚类类型特征概览（C0–C5 数据驱动）")
         summary_df = summarize_clusters(artifacts)
         st.dataframe(summary_df)
 
