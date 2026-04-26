@@ -1,6 +1,9 @@
+import os
+import uuid
 from pathlib import Path
 from typing import Any, Dict
 
+import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
 
@@ -15,6 +18,7 @@ from src.usti_pipeline import (
     summarize_clusters,
     sample_cluster_examples,
 )
+from src.usti_stats import append_result_record, get_stats
 
 DATA_PATH = Path(__file__).resolve().parent / "student_performance_grade.csv"
 
@@ -49,6 +53,12 @@ TEXT: Dict[str, Dict[str, str]] = {
         "process_metric_title": "最佳 K (Silhouette)",
         "process_metric_caption": "K 固定为 6，依据轮廓系数验证聚类效果",
         "hint_modify": "提示：你可以修改答案，观察类型如何变化。",
+        "user_id_label": "统计用 ID（建议学号或固定代号）",
+        "user_id_help": "仅用于去重统计，同一 ID 只统计第一次作答结果。",
+        "stats_header": "整体统计（首答口径）",
+        "stats_question_title": "各题选项占比（仅统计每位同学首次作答）",
+        "stats_type_title": "人格类型占比（仅统计每位同学首次作答）",
+        "stats_empty": "暂时没有统计数据，等有同学完成问卷后再来看吧～",
         "lang_label": "界面语言 / Language",
     },
     "en": {
@@ -78,9 +88,17 @@ TEXT: Dict[str, Dict[str, str]] = {
         "process_metric_title": "Best K (Silhouette)",
         "process_metric_caption": "K fixed at 6; silhouette to validate clustering",
         "hint_modify": "Tip: tweak your answers to see how the type changes.",
+        "user_id_label": "User ID for stats (e.g., student ID or fixed alias)",
+        "user_id_help": "Used only for de-duplicated stats; only the first submission per ID is counted.",
+        "stats_header": "Overall statistics (first-attempt only)",
+        "stats_question_title": "Per-question option share (first submission per user)",
+        "stats_type_title": "Personality type share (first submission per user)",
+        "stats_empty": "No aggregated data yet. Come back after some students have completed the survey.",
         "lang_label": "界面语言 / Language",
     },
 }
+
+ADMIN_TOKEN_ENV = "USTI_STATS_ADMIN_TOKEN"
 
 # 问卷英文文案（保留原始选项作为真实取值，便于映射）
 QUESTION_I18N: Dict[int, Dict[str, Any]] = {
@@ -288,6 +306,27 @@ def set_query_params(**kwargs: Any) -> None:
         st.experimental_set_query_params(**kwargs)
 
 
+def _get_admin_token() -> str | None:
+    env_token = os.getenv(ADMIN_TOKEN_ENV)
+    if env_token:
+        return env_token
+    try:
+        return st.secrets.get("admin_token")
+    except Exception:
+        return None
+
+
+def is_admin_view() -> bool:
+    token = _get_admin_token()
+    if not token:
+        return False
+    params = get_query_params()
+    admin_param = params.get("admin_token")
+    if isinstance(admin_param, list):
+        admin_param = admin_param[0]
+    return isinstance(admin_param, str) and admin_param == token
+
+
 def init_language() -> str:
     params = get_query_params()
     default = params.get("lang", [st.session_state.get("lang", "zh")])[0] if isinstance(params.get("lang"), list) else params.get("lang", st.session_state.get("lang", "zh"))
@@ -379,6 +418,10 @@ def main() -> None:
     lang = init_language()
     st.set_page_config(page_title=t("page_title", lang), layout="wide")
     lang = render_language_switch(lang)
+
+    if "anon_user_id" not in st.session_state:
+        st.session_state["anon_user_id"] = f"anon-{uuid.uuid4().hex}"
+    user_id = st.session_state["anon_user_id"]
 
     st.title(t("main_title", lang))
     st.caption(t("main_caption", lang))
@@ -494,7 +537,39 @@ def main() -> None:
             with col_left:
                 st.pyplot(plot_pca_scatter(artifacts))
 
+        if user_id:
+            append_result_record(user_id=user_id, answers=answers, result=result, lang=lang)
         st.success(t("hint_modify", lang))
+
+    if is_admin_view():
+        st.markdown("---")
+        st.header(t("stats_header", lang))
+        question_stats_df, type_stats_df = get_stats()
+        if (question_stats_df is None or question_stats_df.empty) and (type_stats_df is None or type_stats_df.empty):
+            st.info(t("stats_empty", lang))
+        else:
+            if question_stats_df is not None and not question_stats_df.empty:
+                st.subheader(t("stats_question_title", lang))
+                for qid, group in question_stats_df.groupby("question_id"):
+                    question_text = str(group["question"].iloc[0]) if "question" in group.columns else ""
+                    st.markdown(f"**Q{qid} · {question_text}**")
+                    st.table(group[["option", "count", "ratio"]])
+
+            if type_stats_df is not None and not type_stats_df.empty:
+                st.subheader(t("stats_type_title", lang))
+                st.dataframe(type_stats_df)
+                fig, ax = plt.subplots()
+                if "type" in type_stats_df.columns:
+                    labels = type_stats_df["type"].astype(str)
+                elif "cluster" in type_stats_df.columns:
+                    labels = type_stats_df["cluster"].astype(str)
+                else:
+                    labels = None
+                counts = type_stats_df["count"] if "count" in type_stats_df.columns else None
+                if counts is not None and labels is not None:
+                    ax.pie(counts, labels=labels, autopct="%1.1f%%")
+                    ax.axis("equal")
+                    st.pyplot(fig)
 
 
 if __name__ == "__main__":
