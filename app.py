@@ -187,10 +187,10 @@ FEATURE_DIMENSION_EN = {
 
 PROFILE_EN: Dict[int, Dict[str, str]] = {
     0: {
-        "title": "C0 · genius",
-        "intro": "You grasp new concepts quickly and often excel with seemingly little effort.",
-        "risks_text": "Relying on intuition may hide gaps; advanced courses can become challenging.",
-        "advice_text": "Teach others, build your own notes, and add deliberate practice to your talent.",
+        "title": "C0 · gpt's student",
+        "intro": "You have a heart that leans toward freedom. From the moment you entered university, you decided to be the owner of your own time: to you, the timetable is more of a reference than a clock you must obey. You don’t like being dragged along by a uniform pace, so you often skip classes you find low-yield and keep that time for online lectures and slides, passionate academic conversations with GPT, or deep dives into one or two topics that truly interest you. You know clearly what you are learning and why—but that answer usually comes from the path you quietly designed for yourself, not from assigned homework. To others, you may look like someone who skips class and just lingers around a laptop all day; only you know you are still searching upward and downward along a long road of your own.",
+        "risks_text": "When your center of gravity is self-study and an individual path, it is easy to drift out of sync with course rhythm: you may miss content that looks useless now but is actually foundational. Because you attend less, you may also misread exam scope, assignment expectations, and grading standards. Over time, your real capability may improve steadily, yet your transcript and instructors’ impressions may not fully reflect that progress, creating a subtle frustration—you learned a lot, but the system does not always see it. A more hidden risk is that without self-discipline, your “self-study time” can quietly turn into videos and social feeds. Freedom and aimlessness are separated by a very thin line.",
+        "advice_text": "Since you have chosen a more self-directed route, try making that route more professional. Set a minimum alignment baseline: understand each course’s design logic, core tested points, and key deadlines, then build your own learning rhythm on top of that. Use assignments and exams as staged checkpoints to verify whether your direction and depth are drifting. At the same time, treat GPT and online resources as collaborators, not substitutes—think first, then use tools to expose blind spots and patch gaps. If you add a bit of structure to your freedom, you can stay non-conformist while still earning solid credits and grades, so the identity of “gpt’s student” keeps both idealistic passion and a practical shield.",
     },
     1: {
         "title": "C1 · rat king",
