@@ -12,7 +12,6 @@ except Exception:
     plt = None
 import numpy as np
 import pandas as pd
-import seaborn as sns
 from sklearn.cluster import KMeans
 from sklearn.compose import ColumnTransformer
 from sklearn.decomposition import PCA
@@ -774,9 +773,25 @@ def plot_pca_scatter(artifacts: USTIArtifacts) -> Any | None:
         return None
     df_plot = artifacts.feature_frame.copy()
     fig, ax = plt.subplots(figsize=(7, 5))
-    palette = sns.color_palette("tab10", n_colors=artifacts.best_k)
-    sns.scatterplot(data=df_plot, x="PC1", y="PC2", hue="cluster", palette=palette, ax=ax)
+
+    cluster_ids = sorted(df_plot["cluster"].unique())
+    cmap = plt.colormaps.get_cmap("tab10")
+    for idx, cid in enumerate(cluster_ids):
+        group = df_plot[df_plot["cluster"] == cid]
+        ax.scatter(
+            group["PC1"],
+            group["PC2"],
+            s=28,
+            alpha=0.75,
+            label=f"C{int(cid)}",
+            color=cmap(idx % 10),
+            edgecolors="none",
+        )
+
     ax.set_title("PCA 2D of clusters")
+    ax.set_xlabel("PC1")
+    ax.set_ylabel("PC2")
+    ax.legend(title="Cluster", frameon=False, ncol=2)
     ax.grid(True, alpha=0.2)
     return fig
 
