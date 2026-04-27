@@ -3,7 +3,10 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict
 
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except Exception:
+    plt = None
 import pandas as pd
 import streamlit as st
 
@@ -535,7 +538,11 @@ def main() -> None:
             with col_right:
                 st.dataframe(format_elbow_silhouette(artifacts))
             with col_left:
-                st.pyplot(plot_pca_scatter(artifacts))
+                pca_fig = plot_pca_scatter(artifacts)
+                if pca_fig is not None:
+                    st.pyplot(pca_fig)
+                else:
+                    st.info("绘图组件不可用，暂时以表格查看即可。" if lang == "zh" else "Plotting backend unavailable; please refer to the table above.")
 
         if user_id:
             append_result_record(user_id=user_id, answers=answers, result=result, lang=lang)
@@ -558,18 +565,21 @@ def main() -> None:
             if type_stats_df is not None and not type_stats_df.empty:
                 st.subheader(t("stats_type_title", lang))
                 st.dataframe(type_stats_df)
-                fig, ax = plt.subplots()
                 if "type" in type_stats_df.columns:
-                    labels = type_stats_df["type"].astype(str)
+                    index_col = "type"
                 elif "cluster" in type_stats_df.columns:
-                    labels = type_stats_df["cluster"].astype(str)
+                    index_col = "cluster"
                 else:
-                    labels = None
+                    index_col = None
+                labels = type_stats_df[index_col].astype(str) if index_col else None
                 counts = type_stats_df["count"] if "count" in type_stats_df.columns else None
-                if counts is not None and labels is not None:
+                if plt is not None and counts is not None and labels is not None:
+                    fig, ax = plt.subplots()
                     ax.pie(counts, labels=labels, autopct="%1.1f%%")
                     ax.axis("equal")
                     st.pyplot(fig)
+                elif counts is not None and labels is not None and index_col:
+                    st.bar_chart(type_stats_df.set_index(index_col)["count"])
 
 
 if __name__ == "__main__":

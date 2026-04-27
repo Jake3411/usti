@@ -6,7 +6,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except Exception:
+    plt = None
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -766,7 +769,9 @@ def predict_usti_type(answers: Dict[str, Any], artifacts: USTIArtifacts) -> Dict
     }
 
 
-def plot_pca_scatter(artifacts: USTIArtifacts) -> plt.Figure:
+def plot_pca_scatter(artifacts: USTIArtifacts) -> Any | None:
+    if plt is None:
+        return None
     df_plot = artifacts.feature_frame.copy()
     fig, ax = plt.subplots(figsize=(7, 5))
     palette = sns.color_palette("tab10", n_colors=artifacts.best_k)
