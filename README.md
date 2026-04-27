@@ -20,15 +20,7 @@ streamlit run app.py
 默认使用 `student_performance_grade.csv`，包含学习投入、出勤、睡眠、压力、GPA 等字段，适合映射到行为问卷。
 
 ### 结果
-- 当前固定 K=6（对应 C0–C5）并展示轮廓系数等过程指标
+- 自动搜索 K=2..6，基于 Elbow + Silhouette 选最佳 K
 - PCA 2D 可视化不同 cluster
 - 为每个 cluster 生成趣味命名、行为特点、潜在问题和改进建议
 - 10 题行为问卷输入后可预测对应 USTI 类型并展示解释
-
-### 部署说明（Streamlit Cloud）
-- 已提供 `runtime.txt` 锁定 Python 3.11.9，避免新版本解释器导致的三方库兼容问题
-
-### 管理员模式
-- 普通用户路径：直接访问应用首页并提交问卷
-- 管理员路径：在 URL 加 `?admin_token=任意非空值` 即可打开管理员统计面板
-- 若设置环境变量 `USTI_ADMIN_TOKEN`，则 `admin_token` 必须与该值一致才会进入管理员模式

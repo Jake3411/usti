@@ -1,5 +1,3 @@
-import os
-import uuid
 from pathlib import Path
 from typing import Any, Dict
 
@@ -17,7 +15,6 @@ from src.usti_pipeline import (
     summarize_clusters,
     sample_cluster_examples,
 )
-from src.usti_stats import append_result_record, get_stats
 
 DATA_PATH = Path(__file__).resolve().parent / "student_performance_grade.csv"
 
@@ -53,10 +50,6 @@ TEXT: Dict[str, Dict[str, str]] = {
         "process_metric_caption": "K 固定为 6，依据轮廓系数验证聚类效果",
         "hint_modify": "提示：你可以修改答案，观察类型如何变化。",
         "lang_label": "界面语言 / Language",
-        "admin_header": "管理员统计面板",
-        "admin_empty": "暂无作答记录，提交几份问卷后可查看统计。",
-        "admin_question_stats": "每题选项分布（按每位用户首答）",
-        "admin_type_stats": "类型分布（按每位用户首答）",
     },
     "en": {
         "page_title": "USTI · HKUST",
@@ -86,10 +79,6 @@ TEXT: Dict[str, Dict[str, str]] = {
         "process_metric_caption": "K fixed at 6; silhouette to validate clustering",
         "hint_modify": "Tip: tweak your answers to see how the type changes.",
         "lang_label": "界面语言 / Language",
-        "admin_header": "Admin dashboard",
-        "admin_empty": "No response records yet. Submit a few surveys first.",
-        "admin_question_stats": "Option distribution by question (first attempt per user)",
-        "admin_type_stats": "Type distribution (first attempt per user)",
     },
 }
 
@@ -386,190 +375,6 @@ def localize_profile(profile: Dict[str, Any] | None, cluster_id: int | None, lan
     }
 
 
-def build_probability_df(probability_map: Dict[Any, float], lang: str) -> pd.DataFrame:
-    prob_df = pd.DataFrame([probability_map]).T.reset_index()
-    prob_df.columns = ["Type", "Probability"]
-    prob_df["Type"] = prob_df["Type"].apply(lambda x: f"C{x}")
-    prob_df["Probability"] = prob_df["Probability"].apply(lambda x: f"{x:.1%}")
-    return prob_df.rename(
-        columns={
-            "Type": "类型" if lang == "zh" else "Type",
-            "Probability": "概率" if lang == "zh" else "Probability",
-        }
-    )
-
-
-def build_importances_df(importances: Dict[str, float], lang: str) -> pd.DataFrame:
-    if not importances:
-        return pd.DataFrame()
-    feature_col = "特征" if lang == "zh" else "Feature"
-    importance_col = "重要性" if lang == "zh" else "Importance"
-    imp_df = pd.DataFrame(
-        [{feature_col: feat, importance_col: score} for feat, score in sorted(importances.items(), key=lambda kv: kv[1], reverse=True)]
-    )
-    imp_df[importance_col] = imp_df[importance_col].apply(lambda x: f"{x:.2%}")
-    return imp_df
-
-
-def build_summary_df(artifacts: Any, lang: str) -> pd.DataFrame:
-    summary_df = summarize_clusters(artifacts)
-    if lang != "en":
-        return summary_df
-
-    summary_df = summary_df.copy()
-    summary_df["name"] = summary_df["cluster"].apply(lambda cid: PROFILE_EN.get(int(cid), {}).get("title", f"C{cid}"))
-    summary_df["behavior_summary"] = summary_df["cluster"].apply(
-        lambda cid: PROFILE_EN.get(int(cid), {}).get(
-            "intro", summary_df.loc[summary_df["cluster"] == cid, "behavior_summary"].values[0]
-        )
-    )
-    summary_df["key_signals"] = summary_df["key_signals"].apply(translate_signals_text)
-    return summary_df.rename(
-        columns={
-            "cluster": "Cluster",
-            "name": "Type",
-            "key_signals": "Key signals",
-            "behavior_summary": "Behavior summary",
-            "count": "Samples",
-        }
-    )
-
-
-def render_process_section(artifacts: Any, lang: str) -> None:
-    with st.expander(t("process_expander_title", lang), expanded=False):
-        st.metric(t("process_metric_title", lang), artifacts.best_k)
-        st.caption(t("process_metric_caption", lang))
-        col_left, col_right = st.columns([2, 1])
-        with col_right:
-            st.dataframe(format_elbow_silhouette(artifacts))
-        with col_left:
-            pca_fig = plot_pca_scatter(artifacts)
-            if pca_fig is not None:
-                st.pyplot(pca_fig)
-            else:
-                st.info(
-                    "PCA 图暂不可用，请先查看右侧指标表。"
-                    if lang == "zh"
-                    else "PCA plot is currently unavailable; please refer to the metrics table."
-                )
-
-
-def render_prediction_result(answers: Dict[str, Any], result: Dict[str, Any], artifacts: Any, lang: str) -> None:
-    cluster_id = result["cluster"]
-    kmeans_cluster_id = result.get("kmeans_cluster")
-    profile_raw = result.get("profile") or {}
-    profile = localize_profile(profile_raw, cluster_id, lang)
-    title = profile.get("title") or profile.get("name") or f"C{cluster_id}"
-
-    st.subheader(f"{t('result_header', lang)}：{title}")
-    if result.get("rule_based", False):
-        st.caption(t("rule_caption", lang))
-    if kmeans_cluster_id is not None and kmeans_cluster_id != cluster_id:
-        st.caption(f"{t('kmeans_caption', lang)} C{kmeans_cluster_id}")
-
-    intro_text = profile.get("intro") or profile.get("behavior") or ""
-    risks_text = profile.get("risks_text") or "；".join(profile.get("risks", [])) or ("暂未识别" if lang == "zh" else "Not identified")
-    advice_text = profile.get("advice_text") or "；".join(profile.get("advice", [])) or (
-        "保持当前节奏，继续小步复盘。" if lang == "zh" else "Keep your pace and review regularly."
-    )
-    st.markdown(f"**{t('type_intro', lang)}**：{intro_text}")
-    st.markdown(f"**{t('type_risks', lang)}**：{risks_text}")
-    st.markdown(f"**{t('type_advice', lang)}**：{advice_text}")
-
-    probs = result.get("type_probabilities") or {}
-    cluster_probs = result.get("cluster_probabilities") or {}
-    st.markdown(f"### {t('prob_title_tree', lang)}")
-    if probs:
-        st.dataframe(build_probability_df(probs, lang))
-    else:
-        st.info(t("prob_empty", lang))
-
-    st.markdown(f"### {t('prob_title_kmeans', lang)}")
-    if cluster_probs:
-        st.dataframe(build_probability_df(cluster_probs, lang))
-    else:
-        st.info(t("prob_kmeans_empty", lang))
-
-    st.markdown(f"### {t('importances_title', lang)}")
-    imp_df = build_importances_df(result.get("feature_importances") or {}, lang)
-    if imp_df.empty:
-        st.info(t("importances_empty", lang))
-    else:
-        st.dataframe(imp_df)
-
-    st.markdown(f"### {t('samples_title', lang)}")
-    samples = sample_cluster_examples(artifacts, cluster_id)
-    if samples.empty:
-        st.info(t("samples_empty", lang))
-    else:
-        st.dataframe(samples)
-
-    st.markdown(f"### {t('summary_title', lang)}")
-    st.dataframe(build_summary_df(artifacts, lang))
-
-    st.markdown(f"### {t('answers_title', lang)}")
-    st.dataframe(answers_to_feature_row(answers, artifacts.quantiles))
-
-    render_process_section(artifacts, lang)
-    st.success(t("hint_modify", lang))
-
-
-def get_single_query_param(params: Dict[str, Any], key: str) -> str:
-    value = params.get(key)
-    if isinstance(value, list):
-        return str(value[0]) if value else ""
-    if value is None:
-        return ""
-    return str(value)
-
-
-def is_admin_mode(params: Dict[str, Any]) -> bool:
-    provided_token = get_single_query_param(params, "admin_token").strip()
-    if not provided_token:
-        return False
-
-    configured_token = os.getenv("USTI_ADMIN_TOKEN", "").strip()
-    if configured_token:
-        return provided_token == configured_token
-    return True
-
-
-def get_or_create_user_id() -> str:
-    user_id = st.session_state.get("usti_user_id")
-    if user_id:
-        return str(user_id)
-    new_id = f"anon-{uuid.uuid4().hex[:8]}"
-    st.session_state["usti_user_id"] = new_id
-    return new_id
-
-
-def persist_attempt(answers: Dict[str, Any], result: Dict[str, Any], lang: str) -> None:
-    try:
-        append_result_record(get_or_create_user_id(), answers, result, lang)
-    except Exception:
-        pass
-
-
-def render_admin_panel(lang: str) -> None:
-    question_stats_df, type_stats_df = get_stats()
-    if question_stats_df.empty and type_stats_df.empty:
-        st.info(t("admin_empty", lang))
-        return
-
-    st.markdown("---")
-    st.header(t("admin_header", lang))
-
-    if not type_stats_df.empty:
-        st.subheader(t("admin_type_stats", lang))
-        st.dataframe(type_stats_df)
-        if "type" in type_stats_df.columns and "count" in type_stats_df.columns:
-            st.bar_chart(type_stats_df.set_index("type")["count"])
-
-    if not question_stats_df.empty:
-        st.subheader(t("admin_question_stats", lang))
-        st.dataframe(question_stats_df)
-
-
 def main() -> None:
     lang = init_language()
     st.set_page_config(page_title=t("page_title", lang), layout="wide")
@@ -579,6 +384,7 @@ def main() -> None:
     st.caption(t("main_caption", lang))
 
     artifacts = load_artifacts()
+
     render_feature_meanings(lang)
 
     st.markdown("---")
@@ -587,11 +393,108 @@ def main() -> None:
 
     if answers is not None:
         result = predict_usti_type(answers, artifacts)
-        persist_attempt(answers, result, lang)
-        render_prediction_result(answers, result, artifacts, lang)
+        cluster_id = result["cluster"]
+        kmeans_cluster_id = result.get("kmeans_cluster")
+        profile_raw = result.get("profile") or {}
+        profile = localize_profile(profile_raw, cluster_id, lang)
+        title = profile.get("title") or profile.get("name") or f"C{cluster_id}"
+        probs = result.get("type_probabilities") or {}
+        cluster_probs = result.get("cluster_probabilities") or {}
+        importances = result.get("feature_importances") or {}
+        rule_based = result.get("rule_based", False)
 
-    if is_admin_mode(get_query_params()):
-        render_admin_panel(lang)
+        st.subheader(f"{t('result_header', lang)}：{title}")
+        if rule_based:
+            st.caption(t("rule_caption", lang))
+        if kmeans_cluster_id is not None and kmeans_cluster_id != cluster_id:
+            st.caption(f"{t('kmeans_caption', lang)} C{kmeans_cluster_id}")
+
+        intro_text = profile.get("intro") or profile.get("behavior") or ""
+        risks_text = profile.get("risks_text") or "；".join(profile.get("risks", [])) or ("暂未识别" if lang == "zh" else "Not identified")
+        advice_text = profile.get("advice_text") or "；".join(profile.get("advice", [])) or ("保持当前节奏，继续小步复盘。" if lang == "zh" else "Keep your pace and review regularly.")
+
+        st.markdown(f"**{t('type_intro', lang)}**：{intro_text}")
+        st.markdown(f"**{t('type_risks', lang)}**：{risks_text}")
+        st.markdown(f"**{t('type_advice', lang)}**：{advice_text}")
+
+        st.markdown(f"### {t('prob_title_tree', lang)}")
+        if probs:
+            prob_df = pd.DataFrame([probs]).T.reset_index()
+            prob_df.columns = ["Type", "Probability"]
+            prob_df["Type"] = prob_df["Type"].apply(lambda x: f"C{x}")
+            prob_df["Probability"] = prob_df["Probability"].apply(lambda x: f"{x:.1%}")
+            prob_df = prob_df.rename(columns={"Type": "类型" if lang == "zh" else "Type", "Probability": "概率" if lang == "zh" else "Probability"})
+            st.dataframe(prob_df)
+        else:
+            st.info(t("prob_empty", lang))
+
+        st.markdown(f"### {t('prob_title_kmeans', lang)}")
+        if cluster_probs:
+            kmeans_prob_df = pd.DataFrame([cluster_probs]).T.reset_index()
+            kmeans_prob_df.columns = ["Type", "Probability"]
+            kmeans_prob_df["Type"] = kmeans_prob_df["Type"].apply(lambda x: f"C{x}")
+            kmeans_prob_df["Probability"] = kmeans_prob_df["Probability"].apply(lambda x: f"{x:.1%}")
+            kmeans_prob_df = kmeans_prob_df.rename(columns={"Type": "类型" if lang == "zh" else "Type", "Probability": "概率" if lang == "zh" else "Probability"})
+            st.dataframe(kmeans_prob_df)
+        else:
+            st.info(t("prob_kmeans_empty", lang))
+
+        st.markdown(f"### {t('importances_title', lang)}")
+        if importances:
+            imp_df = pd.DataFrame(
+                [
+                    {"特征" if lang == "zh" else "Feature": feat, "重要性" if lang == "zh" else "Importance": score}
+                    for feat, score in sorted(importances.items(), key=lambda kv: kv[1], reverse=True)
+                ]
+            )
+            imp_col = "重要性" if lang == "zh" else "Importance"
+            imp_df[imp_col] = imp_df[imp_col].apply(lambda x: f"{x:.2%}")
+            st.dataframe(imp_df)
+        else:
+            st.info(t("importances_empty", lang))
+
+        st.markdown(f"### {t('samples_title', lang)}")
+        samples = sample_cluster_examples(artifacts, cluster_id)
+        if samples.empty:
+            st.info(t("samples_empty", lang))
+        else:
+            st.dataframe(samples)
+
+        st.markdown(f"### {t('summary_title', lang)}")
+        summary_df = summarize_clusters(artifacts)
+        if lang == "en":
+            summary_df["name"] = summary_df["cluster"].apply(
+                lambda cid: PROFILE_EN.get(int(cid), {}).get("title", f"C{cid}")
+            )
+            summary_df["behavior_summary"] = summary_df["cluster"].apply(
+                lambda cid: PROFILE_EN.get(int(cid), {}).get("intro", summary_df.loc[summary_df["cluster"] == cid, "behavior_summary"].values[0])
+            )
+            summary_df["key_signals"] = summary_df["key_signals"].apply(translate_signals_text)
+            summary_df = summary_df.rename(
+                columns={
+                    "cluster": "Cluster",
+                    "name": "Type",
+                    "key_signals": "Key signals",
+                    "behavior_summary": "Behavior summary",
+                    "count": "Samples",
+                }
+            )
+        st.dataframe(summary_df)
+
+        st.markdown(f"### {t('answers_title', lang)}")
+        row = answers_to_feature_row(answers, artifacts.quantiles)
+        st.dataframe(row)
+
+        with st.expander(t("process_expander_title", lang), expanded=False):
+            st.metric(t("process_metric_title", lang), artifacts.best_k)
+            st.caption(t("process_metric_caption", lang))
+            col_left, col_right = st.columns([2, 1])
+            with col_right:
+                st.dataframe(format_elbow_silhouette(artifacts))
+            with col_left:
+                st.pyplot(plot_pca_scatter(artifacts))
+
+        st.success(t("hint_modify", lang))
 
 
 if __name__ == "__main__":
